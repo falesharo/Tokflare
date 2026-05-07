@@ -1,0 +1,18 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Database & Logs
+*.db
+*.log
+tokflare.db*
+
+# IDEs
+.vscode/
+.idea/
+.gemini/
+
+# Docker
+docker-compose.override.yml
