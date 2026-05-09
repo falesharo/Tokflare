@@ -26,7 +26,7 @@ class OrderService:
     @staticmethod
     async def calculate_price(comment_count: int, service_id: str = "123") -> Tuple[float, float]:
         """
-        Calculate total price with +50% margin.
+        Calculate total price with dynamic margin.
         Returns (total_price, provider_cost).
         """
         try:
@@ -36,8 +36,8 @@ class OrderService:
             cost_per_unit = 0.05 # Fallback cost
             
         provider_cost = comment_count * cost_per_unit
-        # Add 50% margin
-        total_price = provider_cost * 1.5
+        # Add dynamic margin from settings
+        total_price = provider_cost * settings.PROFIT_MARGIN
         
         # Apply a minimum price if needed
         total_price = max(total_price, 0.50)
@@ -48,3 +48,18 @@ class OrderService:
     def validate_tiktok_url(url: str) -> bool:
         pattern = re.compile(r'(https?://)?(www\.)?tiktok\.com/.+')
         return bool(pattern.match(url))
+    
+    @staticmethod
+    def validate_url(url: str) -> bool:
+        """Validate URL for different platforms."""
+        patterns = {
+            'tiktok': r'(https?://)?(www\.)?tiktok\.com/.+',
+            'instagram': r'(https?://)?(www\.)?instagram\.com/.+',
+            'youtube': r'(https?://)?(www\.)?youtube\.com/.+',
+            'facebook': r'(https?://)?(www\.)?facebook\.com/.+',
+            'twitter': r'(https?://)?(www\.)?twitter\.com/.+',
+        }
+        for pattern in patterns.values():
+            if re.compile(pattern).match(url):
+                return True
+        return False

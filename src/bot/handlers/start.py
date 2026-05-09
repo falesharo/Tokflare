@@ -29,16 +29,25 @@ async def cmd_start(message: types.Message):
         reply_markup=Keyboards.main_menu()
     )
 
-@router.callback_query(lambda c: c.data == "support")
-async def process_support(callback_query: types.CallbackQuery):
-    await callback_query.answer()
-    await callback_query.message.answer(
+@router.callback_query(F.data == "back_main")
+async def process_back_main(callback: types.CallbackQuery):
+    await callback.answer()
+    await callback.message.edit_text(
+        Templates.welcome(callback.from_user.first_name),
+        reply_markup=Keyboards.main_menu()
+    )
+
+@router.callback_query(F.data == "support")
+async def process_support(callback: types.CallbackQuery):
+    await callback.answer()
+    await callback.message.edit_text(
         f"{Templates.BRAND_HEADER}\n"
         "🆘 <b>Support</b>\n\n"
         "If you have any questions or need assistance with your order, "
         "please contact our support team:\n\n"
         "👤 @TokFlareSupport\n"
-        "📧 support@tokflare.com"
+        "📧 support@tokflare.com",
+        reply_markup=Keyboards.back_to_main()
     )
 
 @router.callback_query(F.data == "profile")
@@ -52,14 +61,22 @@ async def process_profile(callback: types.CallbackQuery):
         orders = result.scalars().all()
         total_spent = sum(o.total_price for o in orders if o.status == OrderStatus.COMPLETED)
         
-    await callback.message.answer(
+    # Calculate additional stats
+    completed_orders = sum(1 for o in orders if o.status == OrderStatus.COMPLETED)
+    pending_orders = sum(1 for o in orders if o.status in [OrderStatus.AWAITING_PAYMENT, OrderStatus.PROCESSING])
+    
+    await callback.message.edit_text(
         f"{Templates.BRAND_HEADER}\n"
         f"👤 <b>Account Profile</b>\n\n"
         f"<b>Name:</b> {callback.from_user.full_name}\n"
-        f"<b>ID:</b> <code>{callback.from_user.id}</code>\n\n"
+        f"<b>ID:</b> <code>{callback.from_user.id}</code>\n"
+        f"<b>Username:</b> @{callback.from_user.username or 'N/A'}\n\n"
         f"📊 <b>Stats:</b>\n"
         f"• Total Orders: {len(orders)}\n"
+        f"• Completed: {completed_orders}\n"
+        f"• Pending: {pending_orders}\n"
         f"• Total Spent: ${total_spent:.2f}\n\n"
         f"{Templates.SEPARATOR}\n"
-        "<i>Thank you for using TokFlare!</i>"
+        "<i>Thank you for using TokFlare!</i>",
+        reply_markup=Keyboards.back_to_main()
     )

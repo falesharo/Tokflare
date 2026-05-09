@@ -6,14 +6,19 @@ from aiogram import Bot, Dispatcher
 from src.core.config import settings
 from src.core.logging import setup_logging
 from src.database.db import init_db
-from src.bot.handlers import start, order, history, admin
-from src.bot.middlewares import DbSessionMiddleware, UserManagerMiddleware, LoggingMiddleware
+from src.bot.handlers import start, order, history, admin, wallet
+from src.bot.middlewares import DbSessionMiddleware, UserManagerMiddleware, LoggingMiddleware, RateLimitMiddleware
 from src.bot.utils import router as error_router
 from src.core.tasks import payment_verification_task
+from src.core.smm.cache import service_cache
 
 async def main():
     # Setup logging
     setup_logging()
+    
+    # Initialize Database & Cache
+    await init_db()
+    await service_cache.refresh_cache()
     
     # Initialize Storage
     if settings.REDIS_URL:
@@ -33,16 +38,15 @@ async def main():
     dp.update.outer_middleware(LoggingMiddleware())
     dp.update.middleware(DbSessionMiddleware())
     dp.update.middleware(UserManagerMiddleware())
+    dp.update.middleware(RateLimitMiddleware())
     
     # Register handlers
     dp.include_router(error_router)
     dp.include_router(start.router)
     dp.include_router(order.router)
+    dp.include_router(wallet.router)
     dp.include_router(history.router)
     dp.include_router(admin.router)
-    
-    # Initialize Database
-    await init_db()
     
     # Start background tasks
     asyncio.create_task(payment_verification_task(bot))

@@ -53,3 +53,10 @@ class SMMWizProvider(BaseSMMProvider):
                     if str(service.get('service')) == str(service_id):
                         return float(service.get('rate', 0.10)) / 1000.0 # Rate is usually per 1000
         return 0.10 # Default fallback
+
+    async def get_all_services(self) -> list[dict]:
+        """Fetches all services from the provider."""
+        params = {'key': self.api_key, 'action': 'services'}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.api_url, data=params) as resp:
+                return await resp.json()

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from sqlalchemy import select
+from src.core.config import settings
 from src.database.db import async_session
 from src.database.models import Order, OrderStatus
 from src.core.payments.nowpayments import NOWPayments
@@ -14,12 +15,17 @@ async def payment_verification_task(bot):
     
     while True:
         try:
+            if not settings.NOWPAYMENTS_API_KEY:
+                logging.debug("Skipping payment verification: NOWPAYMENTS_API_KEY not set.")
+                await asyncio.sleep(60)
+                continue
+
             async with async_session() as session:
                 # 1. Check pending payments
                 stmt = select(Order).where(Order.status == OrderStatus.AWAITING_PAYMENT)
                 result = await session.execute(stmt)
                 orders = result.scalars().all()
-                
+
                 for order in orders:
                     # In a real app, you'd get the actual payment_id from a Transaction model
                     # For this demo, we'll just simulate verification
@@ -39,7 +45,7 @@ async def payment_verification_task(bot):
                         # Submit to SMM
                         try:
                             provider = smm_router.get_provider(order.provider_name)
-                            response = await provider.submit_order("123", order.tiktok_url, order.comments.split('\n'))
+                            response = await provider.submit_order(order.service_id or "123", order.tiktok_url, order.comments.split('\n'))
                             order.external_order_id = response.order_id
                             order.status = OrderStatus.PROCESSING
                             await session.commit()
@@ -47,12 +53,24 @@ async def payment_verification_task(bot):
                             logging.error(f"SMM Submission failed for Order #{order.id}: {e}")
                             order.status = OrderStatus.FAILED
                             await session.commit()
+                            await bot.send_message(
+                                order.user_id,
+                                f"❌ <b>Order Failed!</b>\nYour order #{order.id} could not be processed. Please contact support."
+                            )
+                    elif status == "failed":
+                        logging.warning(f"Payment failed for Order #{order.id}")
+                        order.status = OrderStatus.FAILED
+                        await session.commit()
+                        await bot.send_message(
+                            order.user_id,
+                            f"⚠️ <b>Payment Failed!</b>\nYour payment for order #{order.id} could not be processed. Please try again."
+                        )
 
                 # 2. Check processing orders
                 stmt = select(Order).where(Order.status == OrderStatus.PROCESSING)
                 result = await session.execute(stmt)
                 orders = result.scalars().all()
-                
+
                 for order in orders:
                     provider = smm_router.get_provider(order.provider_name)
                     status = await provider.get_status(order.external_order_id)

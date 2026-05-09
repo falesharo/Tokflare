@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # Payment Settings (NOWPayments example)
     NOWPAYMENTS_API_KEY: Optional[str] = None
     NOWPAYMENTS_IPN_SECRET: Optional[str] = None
+    NOWPAYMENTS_IPN_CALLBACK: Optional[str] = None
     
     # SMM Panel Settings
     SMM_API_URL: Optional[str] = None
@@ -22,6 +23,10 @@ class Settings(BaseSettings):
     MIN_COMMENTS: int = 10
     MAX_COMMENTS: int = 1000
     PROFIT_MARGIN: float = 1.5  # 50% profit margin
+    
+    # Security Settings
+    RATE_LIMIT: int = 100  # Requests per minute per user
+    MAX_CONCURRENT_REQUESTS: int = 5
     
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

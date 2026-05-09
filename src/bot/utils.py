@@ -32,6 +32,7 @@ async def error_handler(event: types.ErrorEvent):
             "Our team has been notified. Please try again later or contact support if the issue persists."
         )
     elif event.update.callback_query:
-        await event.update.callback_query.message.answer(
-            "⚠️ <b>System Error</b>\nPlease restart the bot with /start."
+        await event.update.callback_query.answer(
+            "⚠️ System Error\nPlease restart the bot with /start.",
+            show_alert=True
         )
