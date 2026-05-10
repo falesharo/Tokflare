@@ -4,6 +4,8 @@ from src.database.db import async_session
 from src.database.models import Order, OrderStatus, User
 from src.bot.ui.templates import Templates
 from src.bot.keyboards.inline import Keyboards
+from src.bot.utils import update_app_screen
+from src.core.config import settings
 import logging
 
 router = Router()
@@ -19,12 +21,12 @@ async def show_history(callback: types.CallbackQuery, user: User):
         orders = result.scalars().all()
 
     if not orders:
-        await callback.message.edit_text(
+        text = (
             f"{Templates.BRAND_HEADER}\n"
             "📜 <b>ORDER HISTORY</b>\n\n"
-            "No active deployments found in your records.",
-            reply_markup=Keyboards.back_to_main(lang)
+            "No active deployments found in your records."
         )
+        await update_app_screen(callback.message, text, Keyboards.back_to_main(lang), media_path=settings.LOGO_PATH)
         return
 
     history_text = f"{Templates.BRAND_HEADER}\n📜 <b>RECENT DEPLOYMENTS</b>\n\n"
@@ -37,7 +39,7 @@ async def show_history(callback: types.CallbackQuery, user: User):
             f"{Templates.SEPARATOR}\n"
         )
 
-    await callback.message.edit_text(history_text, reply_markup=Keyboards.back_to_main(lang))
+    await update_app_screen(callback.message, history_text, Keyboards.back_to_main(lang), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data.startswith("track_"))
 async def refresh_tracking(callback: types.CallbackQuery, user: User):
@@ -62,13 +64,6 @@ async def refresh_tracking(callback: types.CallbackQuery, user: User):
         f"<i>Last updated: {order.created_at.strftime('%H:%M:%S')}</i>"
     )
     
-    if callback.message.photo:
-        await callback.message.edit_caption(
-            caption=text,
-            reply_markup=Keyboards.order_tracking(order_id, lang)
-        )
-    else:
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=Keyboards.order_tracking(order_id, lang)
-        )
+    # We DON'T force the logo here, because if they are tracking from the QR code screen, 
+    # we want to keep the QR code visible so they can pay.
+    await update_app_screen(callback.message, text, Keyboards.order_tracking(order_id, lang))

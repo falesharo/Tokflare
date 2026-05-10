@@ -10,16 +10,12 @@ from src.bot.keyboards.inline import Keyboards
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.bot.ui.templates import Templates
 from src.bot.ui.i18n import I18n
+from src.bot.utils import update_app_screen
+from src.core.admin_config import admin_settings
 import logging
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-# Global Settings (In production, these should be in a DB table 'Settings')
-ADMIN_SETTINGS = {
-    "test_mode": False,
-    "profit_margin": settings.PROFIT_MARGIN
-}
 
 class AdminStates(StatesGroup):
     waiting_for_margin = State()
@@ -49,10 +45,10 @@ async def admin_panel_root(message: types.Message, state: FSMContext, user: User
         total_deposits = (await session.execute(select(func.sum(Transaction.amount_usd)).where(Transaction.type == TransactionType.DEPOSIT))).scalar() or 0.0
 
     builder = InlineKeyboardBuilder()
-    test_mode_emoji = "🟢" if ADMIN_SETTINGS["test_mode"] else "🔴"
+    test_mode_emoji = "🟢" if admin_settings.test_mode else "🔴"
     
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_test_mode", lang, emoji=test_mode_emoji), callback_data="admin_toggle_test"))
-    builder.row(types.InlineKeyboardButton(text=I18n.t("btn_margin", lang, margin=ADMIN_SETTINGS['profit_margin']), callback_data="admin_set_margin"))
+    builder.row(types.InlineKeyboardButton(text=I18n.t("btn_margin", lang, margin=admin_settings.profit_margin), callback_data="admin_set_margin"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_manage_users", lang), callback_data="admin_users"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_recent_orders", lang), callback_data="admin_orders"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_sync_catalog", lang), callback_data="admin_sync"))
@@ -72,7 +68,8 @@ async def admin_panel_root(message: types.Message, state: FSMContext, user: User
     if isinstance(message, types.Message):
         await message.answer(text, reply_markup=builder.as_markup())
     else:
-        await message.message.edit_text(text, reply_markup=builder.as_markup())
+        # Check if it was a photo message (banner)
+        await update_app_screen(message.message, text, builder.as_markup(), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data == "admin")
 async def admin_callback_root(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -84,8 +81,8 @@ async def admin_callback_root(callback: types.CallbackQuery, state: FSMContext, 
 @router.callback_query(F.data == "admin_toggle_test")
 async def toggle_test_mode(callback: types.CallbackQuery, state: FSMContext, user: User):
     if not is_admin(callback.from_user.id): return
-    ADMIN_SETTINGS["test_mode"] = not ADMIN_SETTINGS["test_mode"]
-    await callback.answer(f"Test Mode: {'ON' if ADMIN_SETTINGS['test_mode'] else 'OFF'}", show_alert=True)
+    admin_settings.test_mode = not admin_settings.test_mode
+    await callback.answer(f"Test Mode: {'ON' if admin_settings.test_mode else 'OFF'}", show_alert=True)
     await admin_panel_root(callback, state, user)
 
 @router.callback_query(F.data == "admin_sync")
@@ -94,7 +91,7 @@ async def sync_catalog(callback: types.CallbackQuery, user: User):
     await callback.answer(I18n.t("btn_sync_catalog", user.language) + "...")
     from src.core.smm.cache import service_cache
     await service_cache.refresh_cache()
-    await callback.answer("✅ Synchronized", show_alert=True)
+    await callback.answer("✅ Catalog Synchronized", show_alert=True)
 
 # --- USER MANAGEMENT ---
 
@@ -102,11 +99,7 @@ async def sync_catalog(callback: types.CallbackQuery, user: User):
 async def admin_user_search_start(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     lang = user.language
-    await callback.message.edit_text(
-        f"{Templates.BRAND_HEADER}\n"
-        f"{I18n.t('admin_user_search', lang)}",
-        reply_markup=InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin")).as_markup()
-    )
+    await update_app_screen(callback.message, f"{Templates.BRAND_HEADER}\n{I18n.t('admin_user_search', lang)}", InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin")).as_markup(), media_path=settings.LOGO_PATH)
     await state.set_state(AdminStates.waiting_for_user_search)
 
 @router.message(AdminStates.waiting_for_user_search)
@@ -137,10 +130,17 @@ async def admin_user_search_result(message: types.Message, state: FSMContext, us
         f"• ID: <code>{target.id}</code>\n"
         f"• {I18n.t('profile_alias', lang, username=target.username or 'none')}\n"
         f"• {I18n.t('profile_rank', lang, tier=target.tier)}\n"
-        f"• {I18n.t('welcome', lang, name='', tier='', icon='', discount=0).split('Benefit:')[0]} Balance: <b>${target.balance:.2f}</b>\n"
+        f"• Balance: <b>${target.balance:.2f}</b>\n"
         f"• {I18n.t('profile_spent', lang, spent=target.total_spent)}\n"
     )
-    await message.answer(text, reply_markup=builder.as_markup())
+    # We send a new message for search result to not clutter the search prompt, or we update app screen.
+    # Let's update app screen for consistency. 
+    # But we need the original app_msg_id which we don't have easily here.
+    # So we'll just send a new one with banner.
+    if os.path.exists(settings.LOGO_PATH):
+        await message.answer_photo(photo=types.FSInputFile(settings.LOGO_PATH), caption=text, reply_markup=builder.as_markup())
+    else:
+        await message.answer(text, reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("admin_user_"))
 async def admin_user_balance_action(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -150,11 +150,7 @@ async def admin_user_balance_action(callback: types.CallbackQuery, state: FSMCon
     
     await state.update_data(bal_action=action_key)
     await callback.answer()
-    await callback.message.edit_text(
-        f"{Templates.BRAND_HEADER}\n"
-        f"{I18n.t('admin_adjust_bal', lang, action=action_text.lower())}",
-        reply_markup=InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin_users")).as_markup()
-    )
+    await update_app_screen(callback.message, f"{Templates.BRAND_HEADER}\n{I18n.t('admin_adjust_bal', lang, action=action_text.lower())}", InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin_users")).as_markup(), media_path=settings.LOGO_PATH)
     await state.set_state(AdminStates.waiting_for_balance_change)
 
 @router.message(AdminStates.waiting_for_balance_change, F.text.regexp(r'^\d+(\.\d{1,2})?$'))
@@ -193,7 +189,7 @@ async def admin_recent_orders(callback: types.CallbackQuery, user: User):
     
     builder = InlineKeyboardBuilder()
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin"))
-    await callback.message.edit_text(text, reply_markup=builder.as_markup())
+    await update_app_screen(callback.message, text, builder.as_markup(), media_path=settings.LOGO_PATH)
 
 # --- SETTINGS MANAGEMENT ---
 
@@ -201,21 +197,19 @@ async def admin_recent_orders(callback: types.CallbackQuery, user: User):
 async def admin_margin_start(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     lang = user.language
-    await callback.message.edit_text(
-        f"{Templates.BRAND_HEADER}\n"
-        f"{I18n.t('admin_margin_title', lang, margin=ADMIN_SETTINGS['profit_margin'])}",
-        reply_markup=InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin")).as_markup()
-    )
+    await update_app_screen(callback.message, f"{Templates.BRAND_HEADER}\n{I18n.t('admin_margin_title', lang, margin=admin_settings.profit_margin)}", InlineKeyboardBuilder().row(types.InlineKeyboardButton(text=I18n.t("btn_back", lang), callback_data="admin")).as_markup(), media_path=settings.LOGO_PATH)
     await state.set_state(AdminStates.waiting_for_margin)
 
 @router.message(AdminStates.waiting_for_margin, F.text.regexp(r'^\d+(\.\d{1,2})?$'))
 async def admin_margin_apply(message: types.Message, state: FSMContext, user: User):
     await cleanup_input(message)
     new_margin = float(message.text)
-    ADMIN_SETTINGS['profit_margin'] = new_margin
+    admin_settings.profit_margin = new_margin
     
     from src.core.smm.cache import service_cache
     await service_cache.refresh_cache()
     
     await message.answer(f"✅ OK: Margin {new_margin}x.")
     await admin_panel_root(message, state, user)
+
+import os

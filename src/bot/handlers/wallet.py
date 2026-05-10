@@ -41,7 +41,7 @@ async def show_wallet(callback: types.CallbackQuery, state: FSMContext, user: Us
     text = Templates.wallet_dashboard(balance, tier, total_spent, lang)
     text += f"{I18n.t('activity_log', lang)}\n{transactions_text}"
     
-    await update_app_screen(callback.message, text, Keyboards.wallet_menu(lang))
+    await update_app_screen(callback.message, text, Keyboards.wallet_menu(lang), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data == "deposit")
 async def process_deposit(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -50,7 +50,8 @@ async def process_deposit(callback: types.CallbackQuery, state: FSMContext, user
     await update_app_screen(
         callback.message,
         I18n.t("deposit_system", lang),
-        reply_markup=Keyboards.back_to_wallet(lang)
+        reply_markup=Keyboards.back_to_wallet(lang),
+        media_path=settings.LOGO_PATH
     )
     await state.set_state(WalletStates.waiting_for_amount)
 
@@ -117,13 +118,29 @@ async def process_payment_selection(callback: types.CallbackQuery, state: FSMCon
     qr_code = generate_payment_qr(payment['pay_address'], payment['pay_amount'], currency)
     qr_file = types.BufferedInputFile(qr_code.read(), filename=f"pay_{new_tx.payment_id}.png")
 
-    # Replace banner/previous with QR Code
-    await callback.message.answer_photo(
-        photo=qr_file,
-        caption=I18n.t("payment_waiting", lang, amount=payment['pay_amount'], currency=currency, address=payment['pay_address']),
-        reply_markup=Keyboards.back_to_wallet(lang)
+    # Replace banner/previous with QR Code using edit_media for perfect transition
+    from aiogram.types import InputMediaPhoto
+    
+    qr_media = InputMediaPhoto(
+        media=qr_file,
+        caption=I18n.t("payment_waiting", lang, amount=payment['pay_amount'], currency=currency, address=payment['pay_address'])
     )
-    await callback.message.delete()
+
+    try:
+        await callback.message.edit_media(
+            media=qr_media,
+            reply_markup=Keyboards.back_to_wallet(lang)
+        )
+    except Exception as e:
+        logger.error(f"Failed to edit media: {e}")
+        # Fallback to answer + delete if edit fails
+        await callback.message.answer_photo(
+            photo=qr_file,
+            caption=I18n.t("payment_waiting", lang, amount=payment['pay_amount'], currency=currency, address=payment['pay_address']),
+            reply_markup=Keyboards.back_to_wallet(lang)
+        )
+        await callback.message.delete()
+    
     await state.clear()
 
 import os

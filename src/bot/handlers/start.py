@@ -52,7 +52,7 @@ async def process_back_main(callback: types.CallbackQuery, state: FSMContext):
         tier = user.tier if user else "BRONZE"
         lang = user.language if user else "en"
 
-    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, tier, lang), Keyboards.main_menu(lang))
+    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, tier, lang), Keyboards.main_menu(lang), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data == "support")
 async def process_support(callback: types.CallbackQuery):

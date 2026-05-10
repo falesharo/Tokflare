@@ -37,19 +37,35 @@ async def error_handler(event: types.ErrorEvent):
             show_alert=True
         )
 
-async def update_app_screen(message: types.Message, text: str, reply_markup=None):
+async def update_app_screen(message: types.Message, text: str, reply_markup=None, media_path: str = None):
     """
     Intelligent helper to update the UI. 
-    Supports both text messages and photo captions.
+    Supports text, caption edits, and media replacement (e.g. reverting to logo).
     """
+    from aiogram.types import InputMediaPhoto, FSInputFile
+    import os
+
     try:
         if message.photo:
-            await message.edit_caption(caption=text, reply_markup=reply_markup)
+            if media_path and os.path.exists(media_path):
+                # Replace current photo (e.g. QR code) with new one (e.g. logo)
+                new_media = InputMediaPhoto(media=FSInputFile(media_path), caption=text)
+                await message.edit_media(media=new_media, reply_markup=reply_markup)
+            else:
+                # Just update the caption
+                await message.edit_caption(caption=text, reply_markup=reply_markup)
         else:
-            await message.edit_text(text=text, reply_markup=reply_markup)
+            if media_path and os.path.exists(media_path):
+                # If it was a text message but we want a photo now
+                await message.answer_photo(photo=FSInputFile(media_path), caption=text, reply_markup=reply_markup)
+                await message.delete()
+            else:
+                await message.edit_text(text=text, reply_markup=reply_markup)
     except Exception as e:
-        # Fallback if editing fails (e.g. message is too old or identical)
         try:
-            await message.answer(text=text, reply_markup=reply_markup)
+            if media_path and os.path.exists(media_path):
+                await message.answer_photo(photo=FSInputFile(media_path), caption=text, reply_markup=reply_markup)
+            else:
+                await message.answer(text=text, reply_markup=reply_markup)
         except Exception:
             pass

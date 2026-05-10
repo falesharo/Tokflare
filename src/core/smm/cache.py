@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from src.core.smm.router import smm_router
 from src.core.config import settings
 from src.core.smm.catalog import ELITE_CATALOG
+from src.core.admin_config import admin_settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +36,20 @@ class ServiceCache:
             processed_count = 0
             new_cache = {}
 
+            # Use persistent margin from admin settings
+            current_margin = admin_settings.profit_margin
+
             for s in raw_services:
                 smm_id = str(s.get('service'))
                 if smm_id in validated_ids:
                     rate = float(s.get('rate', 0))
                     # Store calculated user price
-                    s['user_price_per_1000'] = rate * settings.PROFIT_MARGIN
+                    s['user_price_per_1000'] = rate * current_margin
                     new_cache[smm_id] = s
                     processed_count += 1
 
             self._services = new_cache
-            logger.info(f"Elite Cache Refreshed: {processed_count} validated services active.")
-
-            if processed_count < len(validated_ids):
-                missing = validated_ids - set(new_cache.keys())
-                logger.warning(f"Some elite services are missing from provider: {missing}")
+            logger.info(f"Elite Cache Refreshed: {processed_count} validated services active (Margin: {current_margin}x).")
 
         except Exception as e:
             logger.error(f"Elite Cache Refresh Error: {e}")

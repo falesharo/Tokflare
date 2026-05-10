@@ -32,6 +32,7 @@ TRANSLATIONS = {
         "payment_rejected": "❌ Payment rejected. Insufficient balance.",
         "transmission_error": "⚠️ <b>TRANSMISSION ERROR</b>\nCredits refunded. Try another endpoint.",
         "activity_log": "\n📊 <b>ACTIVITY LOG</b>",
+        "next_tier_info": "\n<i>Reach ${next} to unlock next rank (${remaining:.2f} to go)</i>",
         "no_history": "<i>No recent history found.</i>",
         "session_timeout": "❌ Session timed out. Please start again.",
         "gateway_error": "⚠️ Gateway Error: {error}",
@@ -61,11 +62,6 @@ TRANSLATIONS = {
         "cat_Members 👥": "Members 👥",
         "cat_Subscribers 🔔": "Subscribers 🔔",
 
-        # Notifications
-        "notify_deposit_success": "✨ <b>CREDITS ALLOCATED</b>\n\nDeposit confirmed: <b>+${amount:.2f}</b>\nBonus incentive: <b>+${bonus:.2f}</b>\n\nYour secure balance has been synchronized. ⚡️",
-        "notify_deposit_failed": "⚠️ <b>TRANSACTION FAILED</b>\nThe gateway could not verify your deposit of ${amount:.2f}.",
-        "notify_order_completed": "🏁 <b>OPERATION COMPLETE</b>\nDeployment <code>#{id}</code> successfully finalized.\n\n<i>Target: {link}</i>",
-        
         # Hints
         "hint_IG_PROFILE": "Provide the Instagram <b>Profile Link</b> or <b>@Username</b>.\n<i>(e.g., https://instagram.com/user)</i>",
         "hint_IG_POST": "Provide the Instagram <b>Post URL</b> (Photo or Video).\n<i>(e.g., https://instagram.com/p/ID)</i>",
@@ -166,6 +162,7 @@ TRANSLATIONS = {
         "payment_rejected": "❌ Paiement refusé. Solde insuffisant.",
         "transmission_error": "⚠️ <b>ERREUR DE TRANSMISSION</b>\nCrédits remboursés. Essayez un autre point d'accès.",
         "activity_log": "\n📊 <b>LOG D'ACTIVITÉ</b>",
+        "next_tier_info": "\n<i>Atteignez {next} $ pour débloquer le rang suivant (encore {remaining:.2f} $)</i>",
         "no_history": "<i>Aucun historique récent trouvé.</i>",
         "session_timeout": "❌ Session expirée. Veuillez recommencer.",
         "gateway_error": "⚠️ Erreur Passerelle : {error}",
@@ -195,11 +192,6 @@ TRANSLATIONS = {
         "cat_Members 👥": "Membres 👥",
         "cat_Subscribers 🔔": "Abonnés 🔔",
 
-        # Notifications
-        "notify_deposit_success": "✨ <b>CRÉDITS ALLOUÉS</b>\n\nDépôt confirmé : <b>+{amount:.2f} $</b>\nBonus appliqué : <b>+{bonus:.2f} $</b>\n\nVotre solde sécurisé a été synchronisé. ⚡️",
-        "notify_deposit_failed": "⚠️ <b>ÉCHEC DE LA TRANSACTION</b>\nLa passerelle n'a pas pu vérifier votre dépôt de {amount:.2f} $.",
-        "notify_order_completed": "🏁 <b>OPÉRATION TERMINÉE</b>\nDéploiement <code>#{id}</code> finalisé avec succès.\n\n<i>Cible : {link}</i>",
-        
         # Hints
         "hint_IG_PROFILE": "Fournissez le <b>Lien du Profil</b> Instagram ou le <b>@Username</b>.\n<i>(ex: https://instagram.com/user)</i>",
         "hint_IG_POST": "Fournissez l'<b>URL de la Publication</b> Instagram (Photo ou Vidéo).\n<i>(ex: https://instagram.com/p/ID)</i>",

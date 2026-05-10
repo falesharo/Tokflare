@@ -8,6 +8,7 @@ from src.core.payments.nowpayments import NOWPayments
 from src.core.services.credits import CreditService
 from src.bot.ui.templates import Templates
 from src.bot.ui.i18n import I18n
+from src.core.admin_config import admin_settings
 
 async def payment_verification_task(bot):
     """
@@ -15,7 +16,6 @@ async def payment_verification_task(bot):
     """
     nowpayments = NOWPayments()
     from src.core.smm.router import smm_router
-    from src.bot.handlers.admin import ADMIN_SETTINGS
     
     while True:
         try:
@@ -35,8 +35,10 @@ async def payment_verification_task(bot):
                     user = await session.get(User, tx.user_id)
                     lang = user.language if user else "en"
 
-                    if ADMIN_SETTINGS.get("test_mode"):
+                    # USE PERSISTENT SETTINGS
+                    if admin_settings.test_mode:
                         status = "finished"
+                        logging.info(f"TEST MODE: Auto-confirming deposit for user {tx.user_id}")
                     elif settings.NOWPAYMENTS_API_KEY and tx.payment_id:
                         status = await nowpayments.check_payment_status(tx.payment_id)
                     
@@ -96,4 +98,4 @@ async def payment_verification_task(bot):
         except Exception as e:
             logging.error(f"Error in verification task: {e}")
             
-        await asyncio.sleep(60)
+        await asyncio.sleep(60) # Run every minute

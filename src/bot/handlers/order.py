@@ -13,6 +13,7 @@ from src.database.models import Order, OrderStatus, User, TransactionType
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.bot.states.order import OrderStates
 from src.bot.utils import update_app_screen
+from src.core.config import settings
 import logging
 
 router = Router()
@@ -30,7 +31,7 @@ async def cleanup_user_input(message: types.Message):
 async def start_order_v6(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     platforms = CatalogManager.get_platforms()
-    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, user.tier, user.language), Keyboards.platforms(platforms, user.language))
+    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, user.tier, user.language), Keyboards.platforms(platforms, user.language), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data.startswith("plat_"))
 async def select_platform(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -46,7 +47,7 @@ async def select_platform(callback: types.CallbackQuery, state: FSMContext, user
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data="order_new"))
     
     text = f"{Templates.BRAND_HEADER}\n" + I18n.t("network_select", user.language, platform=platform)
-    await update_app_screen(callback.message, text, builder.as_markup())
+    await update_app_screen(callback.message, text, builder.as_markup(), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data.startswith("act_"))
 async def select_category(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -67,7 +68,7 @@ async def select_category(callback: types.CallbackQuery, state: FSMContext, user
     
     translated_action = I18n.t(f"cat_{full_action}", user.language)
     text = f"{Templates.BRAND_HEADER}\n" + I18n.t("quality_select", user.language, platform=platform, action=translated_action)
-    await update_app_screen(callback.message, text, builder.as_markup())
+    await update_app_screen(callback.message, text, builder.as_markup(), media_path=settings.LOGO_PATH)
 
 @router.callback_query(F.data.startswith("prod_"))
 async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -78,20 +79,21 @@ async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user
 
     service_data = service_cache.get_service_details(product.smm_service_id)
     
+    prod_name = I18n.t(f"name_{product.id}", user.language)
     desc = I18n.t(f"desc_{product.id}", user.language)
     hint = I18n.t(f"hint_{product.link_hint}", user.language)
     
     await state.update_data(
         product_id=product_id,
         service_id=product.smm_service_id, 
-        service_name=product.display_name, 
+        service_name=prod_name, 
         rate=service_data.get('user_price_per_1000', 0.0),
         min_qty=int(service_data.get('min', 10)),
         max_qty=int(service_data.get('max', 10000)),
         app_msg_id=callback.message.message_id
     )
     
-    await update_app_screen(callback.message, Templates.order_link(product.display_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
+    await update_app_screen(callback.message, Templates.order_link(prod_name, desc, hint, user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
     await state.set_state(OrderStates.waiting_for_link)
 
 @router.message(OrderStates.waiting_for_link)
@@ -99,52 +101,39 @@ async def process_link_v3(message: types.Message, state: FSMContext, user: User)
     await cleanup_user_input(message)
     data = await state.get_data()
     
-    # Use direct bot call to edit the "app screen" message
+    # Proxy message object for update_app_screen to work with ID
+    # We create a dummy message with the original ID
+    proxy_msg = types.Message(message_id=data['app_msg_id'], chat=message.chat, date=message.date)
+    # Important: we must check if it was a photo message to use edit_caption
+    # Since we can't easily know from proxy, we'll use a safer approach in update_app_screen or just answer new one
+    
     if not OrderService.validate_url(message.text):
-        await message.bot.edit_message_caption(
-            chat_id=message.chat.id, message_id=data['app_msg_id'],
-            caption=f"{Templates.BRAND_HEADER}\n" + I18n.t("entry_error", user.language),
-            reply_markup=Keyboards.cancel_order(user.language)
-        ) if message.bot.get_current().get_me().can_read_all_group_messages else None # placeholder check
-        # Correct way for both text/photo:
-        # We need a message object. Let's create a proxy.
+        await update_app_screen(proxy_msg, f"{Templates.BRAND_HEADER}\n" + I18n.t("entry_error", user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
         return
 
     await state.update_data(target_url=message.text)
     
-    # Helper to update by ID
-    async def update_by_id(text, markup):
-        try:
-            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
-        except Exception:
-            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
-
     if "Comment" in data['service_name']:
-        await update_by_id(f"{Templates.BRAND_HEADER}\n" + I18n.t("input_required", user.language), Keyboards.cancel_order(user.language))
+        await update_app_screen(proxy_msg, f"{Templates.BRAND_HEADER}\n" + I18n.t("input_required", user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
         await state.set_state(OrderStates.waiting_for_comments)
     else:
-        await update_by_id(Templates.order_quantity(data['min_qty'], data['max_qty'], user.language), Keyboards.cancel_order(user.language))
+        await update_app_screen(proxy_msg, Templates.order_quantity(data['min_qty'], data['max_qty'], user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
         await state.set_state(OrderStates.waiting_for_quantity)
 
 @router.message(OrderStates.waiting_for_quantity)
 async def process_quantity(message: types.Message, state: FSMContext, user: User):
     await cleanup_user_input(message)
     data = await state.get_data()
-    
-    async def update_by_id(text, markup):
-        try:
-            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
-        except Exception:
-            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+    proxy_msg = types.Message(message_id=data['app_msg_id'], chat=message.chat, date=message.date)
 
     try:
         qty = int(message.text)
         if not (data['min_qty'] <= qty <= data['max_qty']): raise ValueError()
     except ValueError:
-        await update_by_id(f"{Templates.BRAND_HEADER}\n" + I18n.t("volume_error", user.language, min=data['min_qty'], max=data['max_qty']), Keyboards.cancel_order(user.language))
+        await update_app_screen(proxy_msg, f"{Templates.BRAND_HEADER}\n" + I18n.t("volume_error", user.language, min=data['min_qty'], max=data['max_qty']), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
         return
 
-    is_eligible_drip = any(x in data['service_name'] for x in ["Followers", "Likes", "Views"])
+    is_eligible_drip = any(x in data['service_name'] for x in ["Followers", "Likes", "Views", "Abonnés", "Vues"])
     await state.update_data(quantity=qty)
     
     if is_eligible_drip:
@@ -153,7 +142,7 @@ async def process_quantity(message: types.Message, state: FSMContext, user: User
             types.InlineKeyboardButton(text=I18n.t("btn_standard", user.language), callback_data="drip_no"),
             types.InlineKeyboardButton(text=I18n.t("btn_drip_feed", user.language), callback_data="drip_yes")
         )
-        await update_by_id(I18n.t("drip_feed_ask", user.language), builder.as_markup())
+        await update_app_screen(proxy_msg, I18n.t("drip_feed_ask", user.language), builder.as_markup(), media_path=settings.LOGO_PATH)
         await state.set_state(OrderStates.waiting_for_drip_feed)
     else:
         await proceed_to_confirmation(message.bot, message.chat.id, state, user)
@@ -168,24 +157,19 @@ async def process_no_drip(callback: types.CallbackQuery, state: FSMContext, user
 async def process_yes_drip(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     await state.update_data(is_drip_feed=1)
-    await update_app_screen(callback.message, I18n.t("drip_feed_runs", user.language), Keyboards.cancel_order(user.language))
+    await update_app_screen(callback.message, I18n.t("drip_feed_runs", user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
     await state.set_state(OrderStates.waiting_for_runs)
 
 @router.message(OrderStates.waiting_for_runs)
 async def process_runs(message: types.Message, state: FSMContext, user: User):
     await cleanup_user_input(message)
     data = await state.get_data()
-    async def update_by_id(text, markup):
-        try:
-            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
-        except Exception:
-            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
-
+    proxy_msg = types.Message(message_id=data['app_msg_id'], chat=message.chat, date=message.date)
     try:
         runs = int(message.text)
         if not (2 <= runs <= 100): raise ValueError()
         await state.update_data(runs=runs)
-        await update_by_id(I18n.t("drip_feed_interval", user.language), Keyboards.cancel_order(user.language))
+        await update_app_screen(proxy_msg, I18n.t("drip_feed_interval", user.language), Keyboards.cancel_order(user.language), media_path=settings.LOGO_PATH)
         await state.set_state(OrderStates.waiting_for_interval)
     except Exception: pass
 
@@ -217,10 +201,8 @@ async def proceed_to_confirmation(bot, chat_id: int, state: FSMContext, user: Us
         markup = Keyboards.back_to_wallet(user.language)
         await state.clear()
 
-    try:
-        await bot.edit_message_caption(chat_id=chat_id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
-    except Exception:
-        await bot.edit_message_text(chat_id=chat_id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+    proxy_msg = types.Message(message_id=data['app_msg_id'], chat=types.Chat(id=chat_id, type="private"), date=None)
+    await update_app_screen(proxy_msg, text, markup, media_path=settings.LOGO_PATH)
     
     if user.balance >= price:
         await state.set_state(OrderStates.confirm_order)
@@ -233,7 +215,7 @@ async def finalize_order(callback: types.CallbackQuery, state: FSMContext, user:
     async with async_session() as session:
         db_user = await session.get(User, user.id)
         if db_user.balance < data['total_price']:
-            await update_app_screen(callback.message, I18n.t("payment_rejected", user.language))
+            await update_app_screen(callback.message, I18n.t("payment_rejected", user.language), media_path=settings.LOGO_PATH)
             return
 
         db_user.balance -= data['total_price']
@@ -259,11 +241,11 @@ async def finalize_order(callback: types.CallbackQuery, state: FSMContext, user:
             )
             session.add(new_order)
             await session.commit()
-            await update_app_screen(callback.message, Templates.order_success(new_order.id, user.language), Keyboards.back_to_main(user.language))
+            await update_app_screen(callback.message, I18n.t("order_success", user.language, order_id=new_order.id), Keyboards.back_to_main(user.language), media_path=settings.LOGO_PATH)
             await state.clear()
         except Exception as e:
             logger.error(f"SMM Submission Error: {e}")
-            await update_app_screen(callback.message, I18n.t("transmission_error", user.language))
+            await update_app_screen(callback.message, I18n.t("transmission_error", user.language), media_path=settings.LOGO_PATH)
             db_user.balance += data['total_price']
             await session.commit()
 
@@ -271,4 +253,4 @@ async def finalize_order(callback: types.CallbackQuery, state: FSMContext, user:
 async def cancel_order_v2(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     await state.clear()
-    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, user.tier, user.language), Keyboards.main_menu(user.language))
+    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, user.tier, user.language), Keyboards.main_menu(user.language), media_path=settings.LOGO_PATH)
