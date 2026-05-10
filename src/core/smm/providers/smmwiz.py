@@ -7,15 +7,26 @@ class SMMWizProvider(BaseSMMProvider):
         self.api_url = api_url
         self.api_key = api_key
 
-    async def submit_order(self, service_id: str, link: str, comments: list[str]) -> ProviderResponse:
+    async def submit_order(self, service_id: str, link: str, quantity: int = None, 
+                           comments: list[str] = None, drip_feed: bool = False, 
+                           runs: int = None, interval: int = None) -> ProviderResponse:
         params = {
             'key': self.api_key,
             'action': 'add',
             'service': service_id,
-            'link': link,
-            'comments': '\n'.join(comments)
+            'link': link
         }
         
+        if comments:
+            params['comments'] = '\n'.join(comments)
+        elif quantity:
+            params['quantity'] = quantity
+        
+        # Support Drip-Feed
+        if drip_feed and runs and interval:
+            params['runs'] = runs
+            params['interval'] = interval
+
         async with aiohttp.ClientSession() as session:
             async with session.post(self.api_url, data=params) as resp:
                 result = await resp.json()
@@ -43,19 +54,13 @@ class SMMWizProvider(BaseSMMProvider):
                 return status_map.get(result.get('status'), ProviderStatus.PENDING)
 
     async def get_service_price(self, service_id: str) -> float:
-        # Many SMM panels don't have a direct "get price for one service" action,
-        # but they have a "services" list.
-        params = {'key': self.api_key, 'action': 'services'}
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.api_url, data=params) as resp:
-                services = await resp.json()
-                for service in services:
-                    if str(service.get('service')) == str(service_id):
-                        return float(service.get('rate', 0.10)) / 1000.0 # Rate is usually per 1000
-        return 0.10 # Default fallback
+        services = await self.get_all_services()
+        for service in services:
+            if str(service.get('service')) == str(service_id):
+                return float(service.get('rate', 0.10))
+        return 0.10
 
     async def get_all_services(self) -> list[dict]:
-        """Fetches all services from the provider."""
         params = {'key': self.api_key, 'action': 'services'}
         async with aiohttp.ClientSession() as session:
             async with session.post(self.api_url, data=params) as resp:

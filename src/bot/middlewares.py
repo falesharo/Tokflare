@@ -36,14 +36,16 @@ class UserManagerMiddleware(BaseMiddleware):
         user = await session.get(User, tg_user.id)
         
         if not user:
+            lang = tg_user.language_code if tg_user.language_code in ["en", "fr"] else "en"
             user = User(
                 id=tg_user.id,
                 username=tg_user.username,
-                full_name=tg_user.full_name
+                full_name=tg_user.full_name,
+                language=lang
             )
             session.add(user)
             await session.commit()
-            logger.info(f"New user registered: {tg_user.id}")
+            logger.info(f"New user registered: {tg_user.id} (Lang: {lang})")
         
         data["user"] = user
         return await handler(event, data)

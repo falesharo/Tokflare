@@ -27,7 +27,10 @@ class User(Base):
     username = Column(String, nullable=True)
     full_name = Column(String)
     balance = Column(Float, default=0.0)
-    is_admin = Column(BigInteger, default=0) # Using 0/1 for boolean-like behavior or BigInteger for flexibility
+    total_spent = Column(Float, default=0.0)
+    tier = Column(String, default="BRONZE") # BRONZE, SILVER, GOLD, ELITE
+    language = Column(String, default="en") # en, fr
+    is_admin = Column(BigInteger, default=0) 
     referrer_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -47,6 +50,12 @@ class Order(Base):
     total_price = Column(Float)
     provider_name = Column(String, nullable=True)
     provider_cost = Column(Float, nullable=True)
+    
+    # Drip-feed fields
+    is_drip_feed = Column(BigInteger, default=0) # 0 or 1
+    runs = Column(Integer, nullable=True)
+    interval = Column(Integer, nullable=True)
+    
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
     external_order_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

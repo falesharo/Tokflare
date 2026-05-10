@@ -28,17 +28,20 @@ class NOWPayments:
             "price_currency": "usd",
             "pay_currency": currency.lower(),
             "order_id": order_id,
-            "order_description": f"TokFlare Order #{order_id}",
-            "ipn_callback_url": settings.NOWPAYMENTS_IPN_CALLBACK or "https://yourdomain.com/ipn"
+            "order_description": f"TokFlare Order #{order_id}"
         }
+        
+        if hasattr(settings, 'NOWPAYMENTS_IPN_CALLBACK') and settings.NOWPAYMENTS_IPN_CALLBACK:
+            payload["ipn_callback_url"] = settings.NOWPAYMENTS_IPN_CALLBACK
 
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.base_url}/payment", json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    return await resp.json()
+                result = await resp.json()
+                if resp.status == 200 or resp.status == 201:
+                    return result
                 else:
-                    logging.error(f"NOWPayments API error: {resp.status}")
-                    return {"error": "Payment creation failed"}
+                    logging.error(f"NOWPayments API error {resp.status}: {result}")
+                    return {"error": result.get('message', 'Payment creation failed')}
 
     async def check_payment_status(self, payment_id: str):
         """
