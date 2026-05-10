@@ -7,6 +7,7 @@ from src.database.models import Order, OrderStatus, Transaction, TransactionType
 from src.core.payments.nowpayments import NOWPayments
 from src.core.services.credits import CreditService
 from src.bot.ui.templates import Templates
+from src.bot.ui.i18n import I18n
 
 async def payment_verification_task(bot):
     """
@@ -29,6 +30,11 @@ async def payment_verification_task(bot):
 
                 for tx in pending_deposits:
                     status = "waiting"
+                    
+                    # Fetch user to get their language
+                    user = await session.get(User, tx.user_id)
+                    lang = user.language if user else "en"
+
                     if ADMIN_SETTINGS.get("test_mode"):
                         status = "finished"
                     elif settings.NOWPAYMENTS_API_KEY and tx.payment_id:
@@ -46,11 +52,8 @@ async def payment_verification_task(bot):
                         
                         await bot.send_message(
                             tx.user_id,
-                            f"{Templates.BRAND_HEADER}\n"
-                            f"✨ <b>CREDITS ALLOCATED</b>\n\n"
-                            f"Deposit confirmed: <b>+${tx.amount_usd:.2f}</b>\n"
-                            f"Bonus incentive: <b>+${bonus:.2f}</b>\n\n"
-                            f"Your secure balance has been synchronized. ⚡️"
+                            f"{Templates.BRAND_HEADER}\n" + 
+                            I18n.t("notify_deposit_success", lang, amount=tx.amount_usd, bonus=bonus)
                         )
                         
                     elif status == "failed":
@@ -58,9 +61,8 @@ async def payment_verification_task(bot):
                         await session.commit()
                         await bot.send_message(
                             tx.user_id,
-                            f"{Templates.BRAND_HEADER}\n"
-                            f"⚠️ <b>TRANSACTION FAILED</b>\n"
-                            f"The gateway could not verify your deposit of ${tx.amount_usd:.2f}."
+                            f"{Templates.BRAND_HEADER}\n" +
+                            I18n.t("notify_deposit_failed", lang, amount=tx.amount_usd)
                         )
 
                 # 2. Check processing orders
@@ -70,20 +72,23 @@ async def payment_verification_task(bot):
 
                 for order in orders:
                     try:
+                        # Fetch user to get language for notification
+                        stmt_u = select(User).where(User.id == order.user_id)
+                        res_u = await session.execute(stmt_u)
+                        u = res_u.scalar()
+                        lang = u.language if u else "en"
+
                         provider = smm_router.get_provider(order.provider_name)
                         if order.external_order_id:
                             status = await provider.get_status(order.external_order_id)
                             
-                            # Log progress (only to console for now)
                             if status.value == "Completed":
                                 order.status = OrderStatus.COMPLETED
                                 await session.commit()
                                 await bot.send_message(
                                     order.user_id,
-                                    f"{Templates.BRAND_HEADER}\n"
-                                    f"🏁 <b>OPERATION COMPLETE</b>\n"
-                                    f"Deployment <code>#{order.id}</code> successfully finalized.\n\n"
-                                    f"<i>Target: {order.tiktok_url}</i>"
+                                    f"{Templates.BRAND_HEADER}\n" +
+                                    I18n.t("notify_order_completed", lang, id=order.id, link=order.tiktok_url)
                                 )
                     except Exception as e:
                         logging.error(f"Error checking order #{order.id} status: {e}")

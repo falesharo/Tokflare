@@ -80,9 +80,9 @@ async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user
 
     service_data = service_cache.get_service_details(product.smm_service_id)
     
-    # Use I18n for product description
-    desc_key = f"desc_{product.id}"
-    translated_desc = I18n.t(desc_key, user.language)
+    # Get localized description and hint
+    desc = I18n.t(f"desc_{product.id}", user.language)
+    hint = I18n.t(f"hint_{product.link_hint}", user.language)
     
     await state.update_data(
         product_id=product_id,
@@ -94,7 +94,7 @@ async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user
         app_msg_id=callback.message.message_id
     )
     
-    await update_app_screen(callback.message, Templates.order_link(product.display_name, translated_desc, user.language), Keyboards.cancel_order(user.language))
+    await update_app_screen(callback.message, Templates.order_link(product.display_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
     await state.set_state(OrderStates.waiting_for_link)
 
 @router.message(OrderStates.waiting_for_link)

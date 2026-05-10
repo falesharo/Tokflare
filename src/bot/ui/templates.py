@@ -29,8 +29,8 @@ class Templates:
         return f"{cls.BRAND_HEADER}\n{content}\n\n{cls.SEPARATOR}\n{I18n.t('select_operation', lang)}"
 
     @classmethod
-    def order_link(cls, product_name: str, description: str, lang: str = "en"):
-        content = I18n.t("order_link", lang, name=product_name, description=description, progress=cls.progress_bar(1, 3))
+    def order_link(cls, product_name: str, description: str, hint: str, lang: str = "en"):
+        content = I18n.t("order_link", lang, name=product_name, description=description, hint=hint, progress=cls.progress_bar(1, 3))
         return f"{cls.BRAND_HEADER}\n{content}"
 
     @classmethod

@@ -4,9 +4,13 @@ from typing import Tuple, List
 class OrderService:
     @staticmethod
     def validate_url(url: str) -> bool:
-        """Validates any social media URL."""
+        """Validates any social media URL or Username."""
         if not url: return False
-        return bool(re.match(r'https?://[^\s]+', url))
+        # URL detection
+        if url.startswith(("http://", "https://")):
+            return bool(re.match(r'https?://[^\s]+', url))
+        # Username detection (optional @, alphanumeric, dots, underscores)
+        return bool(re.match(r'^@?[a-zA-Z0-9._]+$', url))
 
     @staticmethod
     def parse_comments(text: str) -> List[str]:
