@@ -9,6 +9,9 @@ from src.bot.ui.i18n import I18n
 from src.bot.keyboards.inline import Keyboards
 from src.database.models import User, Order, OrderStatus
 from src.database.db import async_session
+from src.core.config import settings
+from src.bot.utils import update_app_screen
+import os
 
 router = Router()
 
@@ -29,10 +32,15 @@ async def cmd_start(message: types.Message):
         tier = user.tier if user else "BRONZE"
         lang = user.language if user else "en"
     
-    await message.answer(
-        Templates.welcome(message.from_user.first_name, tier, lang),
-        reply_markup=Keyboards.main_menu(lang)
-    )
+    text = Templates.welcome(message.from_user.first_name, tier, lang)
+    markup = Keyboards.main_menu(lang)
+
+    # Luxury Banner Check
+    if os.path.exists(settings.LOGO_PATH):
+        logo = types.FSInputFile(settings.LOGO_PATH)
+        await message.answer_photo(photo=logo, caption=text, reply_markup=markup)
+    else:
+        await message.answer(text, reply_markup=markup)
 
 @router.callback_query(F.data == "back_main")
 async def process_back_main(callback: types.CallbackQuery, state: FSMContext):
@@ -44,10 +52,7 @@ async def process_back_main(callback: types.CallbackQuery, state: FSMContext):
         tier = user.tier if user else "BRONZE"
         lang = user.language if user else "en"
 
-    await callback.message.edit_text(
-        Templates.welcome(callback.from_user.first_name, tier, lang),
-        reply_markup=Keyboards.main_menu(lang)
-    )
+    await update_app_screen(callback.message, Templates.welcome(callback.from_user.first_name, tier, lang), Keyboards.main_menu(lang))
 
 @router.callback_query(F.data == "support")
 async def process_support(callback: types.CallbackQuery):
@@ -56,10 +61,7 @@ async def process_support(callback: types.CallbackQuery):
         user = await session.get(User, callback.from_user.id)
         lang = user.language if user else "en"
 
-    await callback.message.edit_text(
-        I18n.t("support_text", lang) + f"\n\n{Templates.SEPARATOR}",
-        reply_markup=Keyboards.back_to_main(lang)
-    )
+    await update_app_screen(callback.message, I18n.t("support_text", lang) + f"\n\n{Templates.SEPARATOR}", Keyboards.back_to_main(lang))
 
 @router.callback_query(F.data == "profile")
 async def process_profile(callback: types.CallbackQuery):
@@ -88,7 +90,8 @@ async def process_profile(callback: types.CallbackQuery):
         f"{Templates.SEPARATOR}"
     )
     
-    await callback.message.edit_text(
+    await update_app_screen(
+        callback.message,
         f"{Templates.BRAND_HEADER}\n{profile_text}",
         reply_markup=Keyboards.profile_menu(lang)
     )
@@ -100,9 +103,10 @@ async def process_change_lang(callback: types.CallbackQuery):
         user = await session.get(User, callback.from_user.id)
         lang = user.language if user else "en"
 
-    await callback.message.edit_text(
+    await update_app_screen(
+        callback.message,
         f"{Templates.BRAND_HEADER}\n"
-        "🌐 <b>LANGUAGE SELECTION</b>\n\n"
+        f"{I18n.t('welcome', lang, name=callback.from_user.first_name, tier='Elite', icon='🌐', discount=0)}\n\n"
         "Please select your preferred interface language:",
         reply_markup=Keyboards.language_selection(lang)
     )

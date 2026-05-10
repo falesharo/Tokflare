@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     RATE_LIMIT: int = 100  # Requests per minute per user
     MAX_CONCURRENT_REQUESTS: int = 5
     
+    LOGO_PATH: str = "src/assets/logo.png"
+    
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 settings = Settings()

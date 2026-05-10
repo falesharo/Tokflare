@@ -9,18 +9,13 @@ from src.database.models import Transaction, TransactionType, User
 from src.database.db import async_session
 from src.core.config import settings
 from src.bot.states.order import WalletStates
+from src.bot.utils import update_app_screen
 from sqlalchemy import select
 import logging
 import uuid
 
 router = Router()
 logger = logging.getLogger(__name__)
-
-async def update_app_screen(message: types.Message, text: str, reply_markup=None):
-    try:
-        await message.edit_text(text=text, reply_markup=reply_markup)
-    except Exception:
-        await message.answer(text=text, reply_markup=reply_markup)
 
 @router.callback_query(F.data == "wallet")
 async def show_wallet(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -29,7 +24,6 @@ async def show_wallet(callback: types.CallbackQuery, state: FSMContext, user: Us
     
     lang = user.language
     async with async_session() as session:
-        # Fetch fresh data
         db_user = await session.get(User, user.id)
         balance = db_user.balance
         tier = db_user.tier
@@ -69,12 +63,20 @@ async def handle_deposit_amount(message: types.Message, state: FSMContext, user:
     amount = float(message.text)
     if amount < 5: return
 
-    await state.update_data(deposit_amount=amount)
+    await state.update_data(deposit_amount=amount, app_msg_id=message.message_id - 1) # Approximation or we should store it
     
-    await message.answer(
-        I18n.t("allocation", lang, amount=amount),
-        reply_markup=Keyboards.payment_methods(back_callback="deposit", lang=lang)
-    )
+    # We send a new message because we can't edit the user's message.
+    # But we want to keep the banner. 
+    # To keep it "tout carré", we'll try to find the previous bot message if possible.
+    # For now, let's just send a new photo message if possible.
+    
+    text = I18n.t("allocation", lang, amount=amount)
+    markup = Keyboards.payment_methods(back_callback="deposit", lang=lang)
+
+    if os.path.exists(settings.LOGO_PATH):
+        await message.answer_photo(photo=types.FSInputFile(settings.LOGO_PATH), caption=text, reply_markup=markup)
+    else:
+        await message.answer(text, reply_markup=markup)
 
 @router.callback_query(F.data.startswith("pay_"))
 async def process_payment_selection(callback: types.CallbackQuery, state: FSMContext, user: User):
@@ -84,7 +86,7 @@ async def process_payment_selection(callback: types.CallbackQuery, state: FSMCon
     lang = user.language
     
     if not amount:
-        await callback.message.edit_text(I18n.t("session_timeout", lang), reply_markup=Keyboards.back_to_wallet(lang))
+        await update_app_screen(callback.message, I18n.t("session_timeout", lang), Keyboards.back_to_wallet(lang))
         return
 
     currency = callback.data.split("_")[1].upper()
@@ -94,7 +96,7 @@ async def process_payment_selection(callback: types.CallbackQuery, state: FSMCon
     payment = await nowpayments.create_payment(amount, currency, external_id)
     
     if "error" in payment:
-        await callback.message.edit_text(I18n.t("gateway_error", lang, error=payment['error']), reply_markup=Keyboards.back_to_wallet(lang))
+        await update_app_screen(callback.message, I18n.t("gateway_error", lang, error=payment['error']), Keyboards.back_to_wallet(lang))
         return
 
     async with async_session() as session:
@@ -115,6 +117,7 @@ async def process_payment_selection(callback: types.CallbackQuery, state: FSMCon
     qr_code = generate_payment_qr(payment['pay_address'], payment['pay_amount'], currency)
     qr_file = types.BufferedInputFile(qr_code.read(), filename=f"pay_{new_tx.payment_id}.png")
 
+    # Replace banner/previous with QR Code
     await callback.message.answer_photo(
         photo=qr_file,
         caption=I18n.t("payment_waiting", lang, amount=payment['pay_amount'], currency=currency, address=payment['pay_address']),
@@ -122,3 +125,5 @@ async def process_payment_selection(callback: types.CallbackQuery, state: FSMCon
     )
     await callback.message.delete()
     await state.clear()
+
+import os

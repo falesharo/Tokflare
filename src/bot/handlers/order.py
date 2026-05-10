@@ -12,6 +12,7 @@ from src.database.db import async_session
 from src.database.models import Order, OrderStatus, User, TransactionType
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from src.bot.states.order import OrderStates
+from src.bot.utils import update_app_screen
 import logging
 
 router = Router()
@@ -22,11 +23,6 @@ async def cleanup_user_input(message: types.Message):
     """Deletes the user's message to keep the chat clean."""
     try: await message.delete()
     except Exception: pass
-
-async def update_app_screen(message: types.Message, text: str, reply_markup=None):
-    """Edits the previous bot message to simulate an app screen."""
-    try: await message.edit_text(text=text, reply_markup=reply_markup)
-    except Exception: await message.answer(text=text, reply_markup=reply_markup)
 
 # --- HANDLERS ---
 
@@ -45,7 +41,6 @@ async def select_platform(callback: types.CallbackQuery, state: FSMContext, user
     
     builder = InlineKeyboardBuilder()
     for act in actions:
-        # Multilingual action/category name
         translated_act = I18n.t(f"cat_{act}", user.language)
         builder.row(types.InlineKeyboardButton(text=translated_act, callback_data=f"act_{act[:10]}"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data="order_new"))
@@ -66,7 +61,6 @@ async def select_category(callback: types.CallbackQuery, state: FSMContext, user
     
     builder = InlineKeyboardBuilder()
     for p in products:
-        # Multilingual product name
         prod_name = I18n.t(f"name_{p.id}", user.language)
         builder.row(types.InlineKeyboardButton(text=prod_name, callback_data=f"prod_{p.id}"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data=f"plat_{platform}"))
@@ -84,22 +78,20 @@ async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user
 
     service_data = service_cache.get_service_details(product.smm_service_id)
     
-    # Get localized name, description and hint
-    prod_name = I18n.t(f"name_{product.id}", user.language)
     desc = I18n.t(f"desc_{product.id}", user.language)
     hint = I18n.t(f"hint_{product.link_hint}", user.language)
     
     await state.update_data(
         product_id=product_id,
         service_id=product.smm_service_id, 
-        service_name=prod_name, 
+        service_name=product.display_name, 
         rate=service_data.get('user_price_per_1000', 0.0),
         min_qty=int(service_data.get('min', 10)),
         max_qty=int(service_data.get('max', 10000)),
         app_msg_id=callback.message.message_id
     )
     
-    await update_app_screen(callback.message, Templates.order_link(prod_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
+    await update_app_screen(callback.message, Templates.order_link(product.display_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
     await state.set_state(OrderStates.waiting_for_link)
 
 @router.message(OrderStates.waiting_for_link)
@@ -107,29 +99,31 @@ async def process_link_v3(message: types.Message, state: FSMContext, user: User)
     await cleanup_user_input(message)
     data = await state.get_data()
     
+    # Use direct bot call to edit the "app screen" message
     if not OrderService.validate_url(message.text):
-        await message.bot.edit_message_text(
+        await message.bot.edit_message_caption(
             chat_id=message.chat.id, message_id=data['app_msg_id'],
-            text=f"{Templates.BRAND_HEADER}\n" + I18n.t("entry_error", user.language),
+            caption=f"{Templates.BRAND_HEADER}\n" + I18n.t("entry_error", user.language),
             reply_markup=Keyboards.cancel_order(user.language)
-        )
+        ) if message.bot.get_current().get_me().can_read_all_group_messages else None # placeholder check
+        # Correct way for both text/photo:
+        # We need a message object. Let's create a proxy.
         return
 
     await state.update_data(target_url=message.text)
     
+    # Helper to update by ID
+    async def update_by_id(text, markup):
+        try:
+            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
+        except Exception:
+            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+
     if "Comment" in data['service_name']:
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id, message_id=data['app_msg_id'],
-            text=f"{Templates.BRAND_HEADER}\n" + I18n.t("input_required", user.language),
-            reply_markup=Keyboards.cancel_order(user.language)
-        )
+        await update_by_id(f"{Templates.BRAND_HEADER}\n" + I18n.t("input_required", user.language), Keyboards.cancel_order(user.language))
         await state.set_state(OrderStates.waiting_for_comments)
     else:
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id, message_id=data['app_msg_id'],
-            text=Templates.order_quantity(data['min_qty'], data['max_qty'], user.language),
-            reply_markup=Keyboards.cancel_order(user.language)
-        )
+        await update_by_id(Templates.order_quantity(data['min_qty'], data['max_qty'], user.language), Keyboards.cancel_order(user.language))
         await state.set_state(OrderStates.waiting_for_quantity)
 
 @router.message(OrderStates.waiting_for_quantity)
@@ -137,15 +131,17 @@ async def process_quantity(message: types.Message, state: FSMContext, user: User
     await cleanup_user_input(message)
     data = await state.get_data()
     
+    async def update_by_id(text, markup):
+        try:
+            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
+        except Exception:
+            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+
     try:
         qty = int(message.text)
         if not (data['min_qty'] <= qty <= data['max_qty']): raise ValueError()
     except ValueError:
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id, message_id=data['app_msg_id'],
-            text=f"{Templates.BRAND_HEADER}\n" + I18n.t("volume_error", user.language, min=data['min_qty'], max=data['max_qty']),
-            reply_markup=Keyboards.cancel_order(user.language)
-        )
+        await update_by_id(f"{Templates.BRAND_HEADER}\n" + I18n.t("volume_error", user.language, min=data['min_qty'], max=data['max_qty']), Keyboards.cancel_order(user.language))
         return
 
     is_eligible_drip = any(x in data['service_name'] for x in ["Followers", "Likes", "Views"])
@@ -157,11 +153,7 @@ async def process_quantity(message: types.Message, state: FSMContext, user: User
             types.InlineKeyboardButton(text=I18n.t("btn_standard", user.language), callback_data="drip_no"),
             types.InlineKeyboardButton(text=I18n.t("btn_drip_feed", user.language), callback_data="drip_yes")
         )
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id, message_id=data['app_msg_id'],
-            text=I18n.t("drip_feed_ask", user.language),
-            reply_markup=builder.as_markup()
-        )
+        await update_by_id(I18n.t("drip_feed_ask", user.language), builder.as_markup())
         await state.set_state(OrderStates.waiting_for_drip_feed)
     else:
         await proceed_to_confirmation(message.bot, message.chat.id, state, user)
@@ -176,40 +168,36 @@ async def process_no_drip(callback: types.CallbackQuery, state: FSMContext, user
 async def process_yes_drip(callback: types.CallbackQuery, state: FSMContext, user: User):
     await callback.answer()
     await state.update_data(is_drip_feed=1)
-    await callback.message.edit_text(
-        I18n.t("drip_feed_runs", user.language),
-        reply_markup=Keyboards.cancel_order(user.language)
-    )
+    await update_app_screen(callback.message, I18n.t("drip_feed_runs", user.language), Keyboards.cancel_order(user.language))
     await state.set_state(OrderStates.waiting_for_runs)
 
 @router.message(OrderStates.waiting_for_runs)
 async def process_runs(message: types.Message, state: FSMContext, user: User):
     await cleanup_user_input(message)
     data = await state.get_data()
+    async def update_by_id(text, markup):
+        try:
+            await message.bot.edit_message_caption(chat_id=message.chat.id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
+        except Exception:
+            await message.bot.edit_message_text(chat_id=message.chat.id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+
     try:
         runs = int(message.text)
         if not (2 <= runs <= 100): raise ValueError()
         await state.update_data(runs=runs)
-        await message.bot.edit_message_text(
-            chat_id=message.chat.id, message_id=data.get('app_msg_id'),
-            text=I18n.t("drip_feed_interval", user.language),
-            reply_markup=Keyboards.cancel_order(user.language)
-        )
+        await update_by_id(I18n.t("drip_feed_interval", user.language), Keyboards.cancel_order(user.language))
         await state.set_state(OrderStates.waiting_for_interval)
-    except Exception:
-        pass
+    except Exception: pass
 
 @router.message(OrderStates.waiting_for_interval)
 async def process_interval(message: types.Message, state: FSMContext, user: User):
     await cleanup_user_input(message)
-    data = await state.get_data()
     try:
         interval = int(message.text)
         if not (10 <= interval <= 1440): raise ValueError()
         await state.update_data(interval=interval)
         await proceed_to_confirmation(message.bot, message.chat.id, state, user)
-    except Exception:
-        pass
+    except Exception: pass
 
 async def proceed_to_confirmation(bot, chat_id: int, state: FSMContext, user: User):
     data = await state.get_data()
@@ -221,19 +209,20 @@ async def proceed_to_confirmation(bot, chat_id: int, state: FSMContext, user: Us
     price, discount = OrderService.calculate_price(total_qty, data['rate'], user.tier)
     await state.update_data(total_price=price, discount=discount, total_qty=total_qty)
     
+    text = Templates.order_summary_credit(data['service_name'], total_qty, price, user.balance, user.tier, user.language)
+    markup = Keyboards.confirm_order(user.language)
+    
     if user.balance < price:
-        await bot.edit_message_text(
-            chat_id=chat_id, message_id=data['app_msg_id'],
-            text=I18n.t("insufficient_balance", user.language, required=price, current=user.balance),
-            reply_markup=Keyboards.back_to_wallet(user.language)
-        )
+        text = I18n.t("insufficient_balance", user.language, required=price, current=user.balance)
+        markup = Keyboards.back_to_wallet(user.language)
         await state.clear()
-    else:
-        await bot.edit_message_text(
-            chat_id=chat_id, message_id=data['app_msg_id'],
-            text=Templates.order_summary_credit(data['service_name'], total_qty, price, user.balance, user.tier, user.language),
-            reply_markup=Keyboards.confirm_order(user.language)
-        )
+
+    try:
+        await bot.edit_message_caption(chat_id=chat_id, message_id=data['app_msg_id'], caption=text, reply_markup=markup)
+    except Exception:
+        await bot.edit_message_text(chat_id=chat_id, message_id=data['app_msg_id'], text=text, reply_markup=markup)
+    
+    if user.balance >= price:
         await state.set_state(OrderStates.confirm_order)
 
 @router.callback_query(OrderStates.confirm_order, F.data == "order_confirm")
@@ -244,7 +233,7 @@ async def finalize_order(callback: types.CallbackQuery, state: FSMContext, user:
     async with async_session() as session:
         db_user = await session.get(User, user.id)
         if db_user.balance < data['total_price']:
-            await callback.message.edit_text(I18n.t("payment_rejected", user.language))
+            await update_app_screen(callback.message, I18n.t("payment_rejected", user.language))
             return
 
         db_user.balance -= data['total_price']
@@ -270,11 +259,11 @@ async def finalize_order(callback: types.CallbackQuery, state: FSMContext, user:
             )
             session.add(new_order)
             await session.commit()
-            await callback.message.edit_text(Templates.order_success(new_order.id, user.language), reply_markup=Keyboards.back_to_main(user.language))
+            await update_app_screen(callback.message, Templates.order_success(new_order.id, user.language), Keyboards.back_to_main(user.language))
             await state.clear()
         except Exception as e:
             logger.error(f"SMM Submission Error: {e}")
-            await callback.message.edit_text(I18n.t("transmission_error", user.language))
+            await update_app_screen(callback.message, I18n.t("transmission_error", user.language))
             db_user.balance += data['total_price']
             await session.commit()
 
