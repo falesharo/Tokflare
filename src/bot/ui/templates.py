@@ -56,8 +56,7 @@ class Templates:
         next_tier_info = ""
         if t['next'] > 0:
             remaining = t['next'] - total_spent
-            # This is hard to translate inline without more keys, but let's keep it simple
-            next_tier_info = f"\n<i>Reach ${t['next']} to unlock next rank (${remaining:.2f} to go)</i>"
+            next_tier_info = I18n.t("next_tier_info", lang, next=t['next'], remaining=remaining)
             
         content = I18n.t("wallet_dashboard", lang, balance=balance, tier=tier, icon=t['icon'], total_spent=total_spent, next_tier_info=next_tier_info)
         recharge = I18n.t("recharge_bonuses", lang)
