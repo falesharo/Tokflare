@@ -36,6 +36,31 @@ TRANSLATIONS = {
         "session_timeout": "❌ Session timed out. Please start again.",
         "gateway_error": "⚠️ Gateway Error: {error}",
         
+        # Product Names
+        "name_ig_followers_elite": "👤 Elite Followers",
+        "name_ig_followers_fr": "👤 Followers France 🇫🇷",
+        "name_ig_followers_usa": "👤 USA Followers",
+        "name_ig_likes_fr": "❤️ Likes France 🇫🇷",
+        "name_ig_likes_organic": "❤️ Organic Likes",
+        "name_ig_story_fr": "👁️ Story Views France 🇫🇷",
+        "name_tk_followers_premium": "👤 Premium Followers",
+        "name_tk_likes_hq": "❤️ Viral Hearts",
+        "name_tk_comments_custom": "💬 Elite Comments",
+        "name_tg_members_premium": "👤 Star Members ⭐️",
+        "name_tg_views_instant": "👁️ Instant Views",
+        "name_yt_views_fr": "👁️ Vues France 🇫🇷",
+        "name_yt_views_organic": "👁️ Organic Views",
+        "name_yt_likes_fr": "❤️ Likes France 🇫🇷",
+        "name_yt_subscribers_auth": "👤 Elite Subscribers",
+
+        # Categories (Actions)
+        "cat_Followers 👤": "Followers 👤",
+        "cat_Likes ❤️": "Likes ❤️",
+        "cat_Views 👁️": "Views 👁️",
+        "cat_Comments 💬": "Comments 💬",
+        "cat_Members 👥": "Members 👥",
+        "cat_Subscribers 🔔": "Subscribers 🔔",
+
         # Notifications
         "notify_deposit_success": "✨ <b>CREDITS ALLOCATED</b>\n\nDeposit confirmed: <b>+${amount:.2f}</b>\nBonus incentive: <b>+${bonus:.2f}</b>\n\nYour secure balance has been synchronized. ⚡️",
         "notify_deposit_failed": "⚠️ <b>TRANSACTION FAILED</b>\nThe gateway could not verify your deposit of ${amount:.2f}.",
@@ -50,6 +75,23 @@ TRANSLATIONS = {
         "hint_TG_POST": "Provide the Telegram <b>Post URL</b>.\n<i>(e.g., https://t.me/channel/ID)</i>",
         "hint_YT_VIDEO": "Provide the YouTube <b>Video URL</b>.\n<i>(e.g., https://youtube.com/watch?v=ID)</i>",
         "hint_YT_CHANNEL": "Provide the YouTube <b>Channel URL</b>.\n<i>(e.g., https://youtube.com/c/ID)</i>",
+        
+        # Descriptions
+        "desc_ig_followers_elite": "💎 QUALITY: Real Accounts [HQ]\n🌍 REGION: Global\n🛡️ WARRANTY: 30 Days Refill",
+        "desc_ig_followers_fr": "💎 QUALITY: 100% French Users\n🛡️ WARRANTY: 30 Days Refill\n⚡ SPEED: High Speed 10k/h",
+        "desc_ig_followers_usa": "💎 QUALITY: Organic Profiles\n🌍 REGION: United States 🇺🇸\n⚡ SPEED: High Retention",
+        "desc_ig_likes_fr": "💎 QUALITY: 100% French Users\n🛡️ WARRANTY: Stable & Organic\n⚡ SPEED: Fast Delivery",
+        "desc_ig_likes_organic": "💎 QUALITY: Real Active Users\n⚡ SPEED: Instant Delivery\n🚀 IMPACT: Explore Page Boost",
+        "desc_ig_story_fr": "💎 QUALITY: 100% French Audience\n⚡ SPEED: Super Instant\n📈 IMPACT: Boost Story Ranking",
+        "desc_tk_followers_premium": "💎 QUALITY: Elite Profiles\n🛡️ WARRANTY: Lifetime Guarantee\n⚡ SPEED: Instant Start",
+        "desc_tk_likes_hq": "💎 QUALITY: High-Quality Profiles\n⚡ SPEED: Express Delivery\n🔥 IMPACT: Viral Momentum",
+        "desc_tk_comments_custom": "💎 QUALITY: Real Active Audience\n✍️ TYPE: 100% Custom Input\n🛡️ SAFETY: Safe & Secure",
+        "desc_tg_members_premium": "💎 QUALITY: Premium Verified Accounts\n📈 IMPACT: Maximum Channel Authority\n🛡️ WARRANTY: Ultra Stable",
+        "desc_tg_views_instant": "💎 QUALITY: Real Post Interactions\n⚡ SPEED: 0-5 min Start\n🌍 REGION: Global Reach",
+        "desc_yt_views_fr": "💎 QUALITY: Real & Active French Views\n📈 IMPACT: Local SEO Boost\n⚡ SPEED: RAV™ Technology",
+        "desc_yt_views_organic": "💎 QUALITY: High Retention Watch-time\n📈 IMPACT: SEO & Search Ranking\n🛡️ WARRANTY: Guaranteed",
+        "desc_yt_likes_fr": "💎 QUALITY: Organic French Profiles\n🛡️ WARRANTY: High Retention\n⚡ SPEED: Fast Delivery",
+        "desc_yt_subscribers_auth": "💎 QUALITY: Authentic Channels\n🛡️ WARRANTY: 100% Non-Drop Lifetime\n🔥 IMPACT: Channel Authority",
         
         # Admin
         "admin_title": "🛠 <b>EXECUTIVE CONTROL PANEL</b>",
@@ -128,6 +170,31 @@ TRANSLATIONS = {
         "session_timeout": "❌ Session expirée. Veuillez recommencer.",
         "gateway_error": "⚠️ Erreur Passerelle : {error}",
         
+        # Product Names
+        "name_ig_followers_elite": "👤 Abonnés Elite",
+        "name_ig_followers_fr": "👤 Abonnés France 🇫🇷",
+        "name_ig_followers_usa": "👤 Abonnés USA",
+        "name_ig_likes_fr": "❤️ Likes France 🇫🇷",
+        "name_ig_likes_organic": "❤️ Likes Organiques",
+        "name_ig_story_fr": "👁️ Vues Story France 🇫🇷",
+        "name_tk_followers_premium": "👤 Abonnés Premium",
+        "name_tk_likes_hq": "❤️ Hearts Viraux",
+        "name_tk_comments_custom": "💬 Commentaires Elite",
+        "name_tg_members_premium": "👤 Membres Premium ⭐️",
+        "name_tg_views_instant": "👁️ Vues Instantanées",
+        "name_yt_views_fr": "👁️ Vues France 🇫🇷",
+        "name_yt_views_organic": "👁️ Vues Organiques",
+        "name_yt_likes_fr": "❤️ Likes France 🇫🇷",
+        "name_yt_subscribers_auth": "👤 Abonnés Elite",
+
+        # Categories (Actions)
+        "cat_Followers 👤": "Abonnés 👤",
+        "cat_Likes ❤️": "Likes ❤️",
+        "cat_Views 👁️": "Vues 👁️",
+        "cat_Comments 💬": "Commentaires 💬",
+        "cat_Members 👥": "Membres 👥",
+        "cat_Subscribers 🔔": "Abonnés 🔔",
+
         # Notifications
         "notify_deposit_success": "✨ <b>CRÉDITS ALLOUÉS</b>\n\nDépôt confirmé : <b>+{amount:.2f} $</b>\nBonus appliqué : <b>+{bonus:.2f} $</b>\n\nVotre solde sécurisé a été synchronisé. ⚡️",
         "notify_deposit_failed": "⚠️ <b>ÉCHEC DE LA TRANSACTION</b>\nLa passerelle n'a pas pu vérifier votre dépôt de {amount:.2f} $.",
@@ -142,6 +209,23 @@ TRANSLATIONS = {
         "hint_TG_POST": "Fournissez l'<b>URL du Message</b> Telegram.\n<i>(ex: https://t.me/canal/ID)</i>",
         "hint_YT_VIDEO": "Fournissez l'<b>URL de la Vidéo</b> YouTube.\n<i>(ex: https://youtube.com/watch?v=ID)</i>",
         "hint_YT_CHANNEL": "Fournissez le <b>Lien de la Chaîne</b> YouTube.\n<i>(ex: https://youtube.com/c/ID)</i>",
+
+        # Descriptions
+        "desc_ig_followers_elite": "💎 QUALITÉ : Comptes Réels [HQ]\n🌍 RÉGION : Global\n🛡️ GARANTIE : Recharge 30 Jours",
+        "desc_ig_followers_fr": "💎 QUALITÉ : 100% Utilisateurs Français\n🛡️ GARANTIE : Recharge 30 Jours\n⚡ VITESSE : Haute Vitesse 10k/h",
+        "desc_ig_followers_usa": "💎 QUALITÉ : Profils Organiques\n🌍 RÉGION : États-Unis 🇺🇸\n⚡ VITESSE : Haute Rétention",
+        "desc_ig_likes_fr": "💎 QUALITÉ : 100% Utilisateurs Français\n🛡️ GARANTIE : Stable & Organique\n⚡ VITESSE : Livraison Rapide",
+        "desc_ig_likes_organic": "💎 QUALITÉ : Utilisateurs Réels Actifs\n⚡ VITESSE : Livraison Instantanée\n🚀 IMPACT : Boost Exploration",
+        "desc_ig_story_fr": "💎 QUALITÉ : 100% Audience Française\n⚡ VITESSE : Super Instantané\n📈 IMPACT : Boost Classement Story",
+        "desc_tk_followers_premium": "💎 QUALITÉ : Profils Elite\n🛡️ GARANTIE : À Vie\n⚡ VITESSE : Démarrage Instantané",
+        "desc_tk_likes_hq": "💎 QUALITÉ : Profils Haute Qualité\n⚡ VITESSE : Livraison Express\n🔥 IMPACT : Dynamique Virale",
+        "desc_tk_comments_custom": "💎 QUALITÉ : Audience Réelle Active\n✍️ TYPE : Saisie 100% Personnalisée\n🛡️ SÉCURITÉ : Sûr & Garanti",
+        "desc_tg_members_premium": "💎 QUALITÉ : Comptes Premium Vérifiés\n📈 IMPACT : Autorité Maximale\n🛡️ GARANTIE : Ultra Stable",
+        "desc_tg_views_instant": "💎 QUALITÉ : Interactions Réelles\n⚡ VITESSE : 0-5 min\n🌍 RÉGION : Portée Globale",
+        "desc_yt_views_fr": "💎 QUALITÉ : Vues Françaises Réelles & Actives\n📈 IMPACT : Boost SEO Local\n⚡ VITESSE : Technologie RAV™",
+        "desc_yt_views_organic": "💎 QUALITÉ : Haute Rétention\n📈 IMPACT : Référencement SEO\n🛡️ GARANTIE : Garanti",
+        "desc_yt_likes_fr": "💎 QUALITÉ : Profils Français Organiques\n🛡️ GARANTIE : Haute Rétention\n⚡ VITESSE : Livraison Rapide",
+        "desc_yt_subscribers_auth": "💎 QUALITÉ : Chaînes Authentiques\n🛡️ GARANTIE : Sans Perte À Vie\n🔥 IMPACT : Autorité de Chaîne",
 
         # Admin
         "admin_title": "🛠 <b>PANNEAU DE CONTRÔLE EXÉCUTIF</b>",

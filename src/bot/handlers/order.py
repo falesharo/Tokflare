@@ -64,8 +64,9 @@ async def select_category(callback: types.CallbackQuery, state: FSMContext, user
     
     builder = InlineKeyboardBuilder()
     for p in products:
-        # Price REMOVED from button as requested
-        builder.row(types.InlineKeyboardButton(text=p.display_name, callback_data=f"prod_{p.id}"))
+        # Multilingual product name
+        prod_name = I18n.t(f"name_{p.id}", user.language)
+        builder.row(types.InlineKeyboardButton(text=prod_name, callback_data=f"prod_{p.id}"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data=f"plat_{platform}"))
     
     text = f"{Templates.BRAND_HEADER}\n" + I18n.t("quality_select", user.language, platform=platform, action=full_action)
@@ -80,21 +81,22 @@ async def enter_link_step(callback: types.CallbackQuery, state: FSMContext, user
 
     service_data = service_cache.get_service_details(product.smm_service_id)
     
-    # Get localized description and hint
+    # Get localized name, description and hint
+    prod_name = I18n.t(f"name_{product.id}", user.language)
     desc = I18n.t(f"desc_{product.id}", user.language)
     hint = I18n.t(f"hint_{product.link_hint}", user.language)
     
     await state.update_data(
         product_id=product_id,
         service_id=product.smm_service_id, 
-        service_name=product.display_name, 
+        service_name=prod_name, 
         rate=service_data.get('user_price_per_1000', 0.0),
         min_qty=int(service_data.get('min', 10)),
         max_qty=int(service_data.get('max', 10000)),
         app_msg_id=callback.message.message_id
     )
     
-    await update_app_screen(callback.message, Templates.order_link(product.display_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
+    await update_app_screen(callback.message, Templates.order_link(prod_name, desc, hint, user.language), Keyboards.cancel_order(user.language))
     await state.set_state(OrderStates.waiting_for_link)
 
 @router.message(OrderStates.waiting_for_link)
@@ -197,6 +199,7 @@ async def process_runs(message: types.Message, state: FSMContext, user: User):
 @router.message(OrderStates.waiting_for_interval)
 async def process_interval(message: types.Message, state: FSMContext, user: User):
     await cleanup_user_input(message)
+    data = await state.get_data()
     try:
         interval = int(message.text)
         if not (10 <= interval <= 1440): raise ValueError()

@@ -25,6 +25,15 @@ ELITE_CATALOG = [
         platform="Instagram"
     ),
     TokFlareProduct(
+        id="ig_followers_fr",
+        display_name="👤 Followers France 🇫🇷",
+        description="💎 QUALITY: 100% French Users\n🛡️ WARRANTY: 30 Days Refill\n⚡ SPEED: High Speed 10k/h",
+        link_hint="IG_PROFILE",
+        smm_service_id="18645",
+        category="Followers 👤",
+        platform="Instagram"
+    ),
+    TokFlareProduct(
         id="ig_followers_usa",
         display_name="👤 USA Followers",
         description="💎 QUALITY: Organic Profiles\n🌍 REGION: United States 🇺🇸\n⚡ SPEED: High Retention",
@@ -34,12 +43,30 @@ ELITE_CATALOG = [
         platform="Instagram"
     ),
     TokFlareProduct(
+        id="ig_likes_fr",
+        display_name="❤️ Likes France 🇫🇷",
+        description="💎 QUALITY: 100% French Users\n🛡️ WARRANTY: Stable & Organic\n⚡ SPEED: Fast Delivery",
+        link_hint="IG_POST",
+        smm_service_id="18648",
+        category="Likes ❤️",
+        platform="Instagram"
+    ),
+    TokFlareProduct(
         id="ig_likes_organic",
         display_name="❤️ Organic Likes",
         description="💎 QUALITY: Real Active Users\n⚡ SPEED: Instant Delivery\n🚀 IMPACT: Explore Page Boost",
         link_hint="IG_POST",
         smm_service_id="17702",
         category="Likes ❤️",
+        platform="Instagram"
+    ),
+    TokFlareProduct(
+        id="ig_story_fr",
+        display_name="👁️ Story Views France 🇫🇷",
+        description="💎 QUALITY: 100% French Audience\n⚡ SPEED: Super Instant\n📈 IMPACT: Boost Story Ranking",
+        link_hint="IG_POST",
+        smm_service_id="19584",
+        category="Views 👁️",
         platform="Instagram"
     ),
     
@@ -94,12 +121,30 @@ ELITE_CATALOG = [
     
     # YOUTUBE
     TokFlareProduct(
+        id="yt_views_fr",
+        display_name="👁️ Vues France 🇫🇷",
+        description="💎 QUALITY: Real & Active French Views\n📈 IMPACT: Local SEO Boost\n⚡ SPEED: RAV™ Technology",
+        link_hint="YT_VIDEO",
+        smm_service_id="14035",
+        category="Views 👁️",
+        platform="YouTube"
+    ),
+    TokFlareProduct(
         id="yt_views_organic",
         display_name="👁️ Organic Views",
         description="💎 QUALITY: High Retention Watch-time\n📈 IMPACT: SEO & Search Ranking\n🛡️ WARRANTY: Guaranteed",
         link_hint="YT_VIDEO",
         smm_service_id="12950",
         category="Views 👁️",
+        platform="YouTube"
+    ),
+    TokFlareProduct(
+        id="yt_likes_fr",
+        display_name="❤️ Likes France 🇫🇷",
+        description="💎 QUALITY: Organic French Profiles\n🛡️ WARRANTY: High Retention\n⚡ SPEED: Fast Delivery",
+        link_hint="YT_VIDEO",
+        smm_service_id="14141",
+        category="Likes ❤️",
         platform="YouTube"
     ),
     TokFlareProduct(
