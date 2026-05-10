@@ -45,7 +45,9 @@ async def select_platform(callback: types.CallbackQuery, state: FSMContext, user
     
     builder = InlineKeyboardBuilder()
     for act in actions:
-        builder.row(types.InlineKeyboardButton(text=act, callback_data=f"act_{act[:10]}"))
+        # Multilingual action/category name
+        translated_act = I18n.t(f"cat_{act}", user.language)
+        builder.row(types.InlineKeyboardButton(text=translated_act, callback_data=f"act_{act[:10]}"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data="order_new"))
     
     text = f"{Templates.BRAND_HEADER}\n" + I18n.t("network_select", user.language, platform=platform)
@@ -69,7 +71,8 @@ async def select_category(callback: types.CallbackQuery, state: FSMContext, user
         builder.row(types.InlineKeyboardButton(text=prod_name, callback_data=f"prod_{p.id}"))
     builder.row(types.InlineKeyboardButton(text=I18n.t("btn_back", user.language), callback_data=f"plat_{platform}"))
     
-    text = f"{Templates.BRAND_HEADER}\n" + I18n.t("quality_select", user.language, platform=platform, action=full_action)
+    translated_action = I18n.t(f"cat_{full_action}", user.language)
+    text = f"{Templates.BRAND_HEADER}\n" + I18n.t("quality_select", user.language, platform=platform, action=translated_action)
     await update_app_screen(callback.message, text, builder.as_markup())
 
 @router.callback_query(F.data.startswith("prod_"))

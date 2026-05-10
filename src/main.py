@@ -31,7 +31,11 @@ async def main():
         storage = MemoryStorage()
     
     # Initialize Bot and Dispatcher
-    bot = Bot(token=settings.BOT_TOKEN, parse_mode="HTML")
+    from aiogram.client.default import DefaultBotProperties
+    bot = Bot(
+        token=settings.BOT_TOKEN, 
+        default=DefaultBotProperties(parse_mode="HTML", link_preview_is_disabled=True)
+    )
     dp = Dispatcher(storage=storage)
     
     # Setup Middlewares
